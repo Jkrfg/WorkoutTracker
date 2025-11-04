@@ -41,7 +41,38 @@ export default function WorkoutDashboard(){
   function resetDay(){ const newDone={...doneMap}; PROGRAM[activeDay].forEach(ex=>{const key=`${activeUser}_${activeDay}_${ex.key}_done`; newDone[key]=false;}); setDoneMap(newDone); setNotes(s=>({...s,[`${activeUser}_${activeDay}_note`]:""}));}
   function completeAndNext(){ setDoneMap(s=>{const copy={...s}; PROGRAM[activeDay].forEach(ex=>{const key=`${activeUser}_${activeDay}_${ex.key}_done`; copy[key]=true;}); return copy;}); nextDay(); }
 
-  function exportHistoryCSV(){ const rows=['user,day,exercise,weight,timestamp']; history.forEach(h=>{const userObj=USERS.find(u=>u.id===h.user); const userName=userObj?String(userObj.name):String(h.user); const day=String(h.day); const ex=String(h.exKey); const wt=String(h.weight); const ts=String(h.ts); rows.push(`\"${userName}\",\"${day}\",\"${ex}\",\"${wt}\",\"${ts}\"`); }); const csv=rows.join(\"\\n\"); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`workout-history-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url); }
+function exportHistoryCSV() {
+  // header
+  const rows = ['user,day,exercise,weight,timestamp'];
+
+  history.forEach((h) => {
+    // display name if possible
+    const userObj = USERS.find(u => u.id === h.user);
+    const userName = userObj ? String(userObj.name) : String(h.user);
+    const day = String(h.day);
+    const ex = String(h.exKey);
+    const wt = String(h.weight);
+    const ts = String(h.ts);
+
+    // CSV safety: double-quote fields, escape existing double-quotes by doubling them
+    const safe = (v) => `"${String(v).replace(/"/g, '""')}"`;
+
+    rows.push([safe(userName), safe(day), safe(ex), safe(wt), safe(ts)].join(','));
+  });
+
+  // join with a real newline escape (simple and correct)
+  const csv = rows.join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `workout-history-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); // some browsers need the element in DOM
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
   function computeSuggestedForUser(ex){ if(activeUser==='M'){ const pct=(percentMap['M']??50)/100; return roundHalf(ex.suggested*pct);} return ex.suggested; }
   function onPercentChange(userId,value){ const num=Number(value); if(Number.isNaN(num)) return; setPercentMap(s=>({...s,[userId]:Math.max(10,Math.min(100,Math.round(num)))})); }
